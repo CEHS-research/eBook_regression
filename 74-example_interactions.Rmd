@@ -1,66 +1,79 @@
 # Interactions Example
 
-```{r, comment=FALSE, message=FALSE, error=FALSE, warning=FALSE}
-library(tidyverse)
-library(emmeans)
-library(furniture)
-library(stargazer)
-library(psych)
-library(texreg)
-library(interactions)
-```
 
 
 Taken from: https://stats.idre.ucla.edu/r/seminars/interactions-r/
 
-## Motivation
+## PURPOSE 
+
+### Motivation
 
 Suppose you are doing a simple study on weight loss and notice that people who spend more time exercising lose more weight. Upon further analysis you notice that those who spend the same amount of time exercising lose more weight if they are more effortful. The more effort people put into their workouts, the less time they need to spend exercising. This is popular in workouts like high intensity interval training (HIIT).
 
+
+### Research Questions
+
 You know that hours spent exercising improves weight loss, but how does it interact with effort? Here are three questions you can ask based on hypothetical scenarios.
 
-* I’m just starting out and don’t want to put in too much effort. How many hours per week of exercise do I need to put in to lose 5 pounds?
+1. I’m just starting out and don’t want to put in too much effort. How many hours per week of exercise do I need to put in to lose 5 pounds?
 
-* I’m moderately fit and can put in an average level of effort into my workout. For every one hour increase per week in exercise, how much additional weight loss do I expect?
+2. I’m moderately fit and can put in an average level of effort into my workout. For every one hour increase per week in exercise, how much additional weight loss do I expect?
 
-* I’m a crossfit athlete and can perform with the utmost intensity. How much more weight loss would I expect for every one hour increase in exercise compared to the average amount of effort most people put in?
+3. I’m a crossfit athlete and can perform with the utmost intensity. How much more weight loss would I expect for every one hour increase in exercise compared to the average amount of effort most people put in?
 
 Additionally, we can *visualize the interaction* to help us understand these relationships.
 
-## The Weight Loss Study
+
+
+### Data Description
 
 This is a hypothetical study of weight loss for 900 participants in a year-long study of 3 different exercise programs, a jogging program, a swimming program, and a reading program which serves as a control activity. 
 
-**Variables** 
-
-* `loss`: weight loss (continuous), positive = weight loss, negative scores = weight gain
-* `hours`: hours spent exercising *(continuous)*
-* `effort`: effort during exercise *(continuous)*
-    + 0 = minimal physical effort and 
-    + 50 = maximum effort
-* `prog`: exercise program *(categorical)*
-    + jogging=1
-    + swimming=2
-    + reading=3
-* `gender`: participant gender *(binary)*
-    + male=1
-    + female=2
 
 
-**Definitions**
 
-> What exactly do I mean by decomposing, probing, and plotting an interaction?
+#### Dependent variable or outcome (DV, $Y$)  
+
+* `loss` weight loss *(continuous)*
+    + positive = weight lose
+    + negative = weight gain
+
+
+#### Independent variable of primary focus or main predictor (IV, $X$)
+
+* `hours` hours spent exercising *(continuous)*
+
+#### Potential moderating variables, type of predictor (MV, $W$)
+
+* `effort` effort during exercise *(continuous)*
+    + min = 0,  minimal physical effort and 
+    + max = 50,  maximum effort
+* `prog` exercise program *(categorical)*
+    + 1 = jogging
+    + 2 = swimming
+    + 3 = reading
+
+#### Covariate, predictor to control for (covar, $X$ or $W$)
+
+* `gender` participant gender *(binary)*
+    + 1 = male
+    + 2 = female
+
+
+
+### Definitions
+
+
+#### What exactly do I mean by decomposing, probing, and plotting an interaction?
 
 * **decompose**: to break down the interaction into its lower order components (i.e., predicted means or simple slopes)
 * **probe**: to use hypothesis testing to assess the statistical significance of simple slopes and simple slope differences (i.e., interactions)
 * **plot**: to visually display the interaction in the form of simple slopes such as values of the dependent variable are on the y-axis, values of the predictor is on the x-axis, and the moderator separates the lines or bar graphs
 
 
-Let’s define the **essential elements** of the interaction in a regression:
+#### Let’s define the **essential elements** of the interaction in a regression:
 
-* DV: **dependent variable** (Y), the outcome of your study (e.g., weight loss)
-* IV: **independent variable** (X), the predictor of your outcome (e.g., time exercising)
-* MV: **moderating variable** (W) or moderator, a predictor that changes the relationship of the IV on the DV (e.g, effort)
+
 * **coefficient**: estimate of the direction and magnitude of the relationship between an IV and DV
 * **continuous variable**: a variable that can be measured on a continuous scale, e.g., weight, height
 * **categorical or binary variable**: a variable that takes on discrete values, binary variables take on exactly two values, categorical variables can take on 3 or more values (e.g., gender, ethnicity)
@@ -69,20 +82,44 @@ Let’s define the **essential elements** of the interaction in a regression:
 * **simple effect**: when a categorical IV interacts with an MV, its effect at a particular level of an MV
 
 
+## PREPARATION
+
+### Load Packages
+
+```{r, comment=FALSE, message=FALSE, error=FALSE, warning=FALSE}
+# library(remotes)
+# remotes::install_github("sarbearschwartz/apaSupp")
+# remotes::install_github("ddsjoberg/gtsummary")
+
+library(tidyverse)       
+library(haven)   
+library(naniar)       
+library(apaSupp)
+library(corrplot)
+library(GGally)
+library(performance)
+library(interactions)
+library(ggResidpanel)
+library(car)
+library(emmeans)
+library(interactions)
+```
+
+
 ### Import Data
 
 ```{r}
-data_raw <- read.csv("https://stats.idre.ucla.edu/wp-content/uploads/2019/03/exercise.csv")
+df_raw <- read.csv("https://stats.idre.ucla.edu/wp-content/uploads/2019/03/exercise.csv")
 ```
 
 
 
 ```{r}
-tibble::glimpse(data_raw)
+tibble::glimpse(df_raw)
 ```
 
 ```{r}
-data_raw %>% 
+df_raw %>% 
   summary()
 ```
 
@@ -90,7 +127,7 @@ data_raw %>%
 ### Wrangle the data 
 
 ```{r}
-data_clean <- data_raw %>% 
+df_clean <- df_raw %>% 
   dplyr::mutate(id = factor(id)) %>% 
   dplyr::mutate(gender = factor(gender) %>% 
                   forcats::fct_recode("Male"   = "1",
@@ -103,38 +140,54 @@ data_clean <- data_raw %>%
 
 
 ```{r}
-tibble::glimpse(data_clean)
+tibble::glimpse(df_clean)
 ```
 
 ```{r}
-summary(data_clean)
+summary(df_clean)
 ```
 
-## Exploratory Data Analysis
+
+
+## EXPLORATORY DATA ANALYSIS
 
 ### Summary Statistics
 
+#### Univariate
 
 ```{r}
-data_clean %>%  
-  psych::describe()
+df_clean %>%  
+  dplyr::select("Weight Lost, lbs" = loss,
+                "Time, hrs" = hours,
+                "Effort, 0-50" = effort) %>% 
+  apaSupp::tab_desc(caption = "Descriptive Summary of Quantitative Measures on Participants")
 ```
 
 
 ```{r}
-data_clean %>% 
-  stargazer::stargazer(type = "text")
+df_clean %>% 
+  dplyr::select("Program" = prog,
+                "Gender" = gender) %>% 
+  apaSupp::tab_freq(caption = "Descriptive Summary of Quantitative Measures on Participants")
 ```
 
 
+#### Bivariate
+
+
 ```{r}
-data_clean %>%  
-  furniture::table1(gender, loss, hours, effort)
+df_clean %>% 
+  dplyr::select(prog,
+                "Gender" = gender) %>% 
+  apaSupp::tab_freq(split = "prog",
+                    caption = "Corsstabulation of Participants by Gender and Randomly Assigned Program")
 ```
 
 
+
+
 ```{r}
-data_clean %>% 
+df_clean %>% 
   dplyr::group_by(prog) %>% 
   furniture::table1("Gender" = gender,
                     "Weight Loss, pounds" = loss, 
@@ -146,107 +199,177 @@ data_clean %>%
                     test = TRUE)
 ```
 
-### Correlations
-
-```{r}
-data_clean %>% 
-  dplyr::select_if(is.numeric) %>% 
-  furniture::tableC()
-```
-
-```{r}
-data_clean %>% 
-  cor.test(~ loss + hours,
-           data = .)
-```
 
 
 ```{r}
-data_clean %>% 
-  cor.test(~ loss + effort,
-           data = .)
-```
-
-```{r}
-data_clean %>% 
-  cor.test(~ hours + effort, 
-           data = .)
-```
-
-```{r}
-data_clean %>% 
-  dplyr::select_if(is.numeric) %>% 
-  cor()
-```
-
-```{r}
-data_clean %>% 
-  dplyr::select_if(is.numeric) %>% 
-  cor() %>% 
-  corrplot::corrplot()
+df_clean %>% 
+  dplyr::mutate(gender = as.numeric(gender == "Female")) %>% 
+  dplyr::select("Weight" = loss,
+                "Time" = hours,
+                "Effort" = effort,
+                "Gender" = gender) %>% 
+  apaSupp::tab_cor(caption= "Correlations") %>% 
+  flextable::bold(i = 1:2) %>% 
+  flextable::hline(i = 3)
 ```
 
 
-```{r}
-data_clean %>% 
-  dplyr::select_if(is.numeric) %>% 
-  cor() %>% 
-  corrplot::corrplot.mixed()
+### Visualization
+
+
+#### Univariate Distributions
+
+```{r, fig.cap="Distribution of Weight Lost"}
+df_clean %>% 
+  apaSupp::spicy_histos(var = loss) +
+  labs(x = "Weight Lost, lbs")
+```
+
+
+```{r, fig.width=6, fig.height=6, fig.cap="Distribution of Weight Lost by Program"}
+df_clean %>% 
+  apaSupp::spicy_histos(var = loss,
+                        split = prog) +
+  labs(x = "Weight Lost, lbs")
+```
+
+```{r, fig.width=6, fig.height=4, fig.cap="Distribution of Weight Lost by Gender"}
+df_clean %>% 
+  apaSupp::spicy_histos(var = loss,
+                        split = gender) +
+  labs(x = "Weight Lost, lbs")
 ```
 
 
 
-### Visualization Bivariate Relationships
+```{r, fig.cap="Distribution of Time Spent"}
+df_clean %>% 
+  apaSupp::spicy_histos(var = hours) +
+  labs(x = "Exercise Time, hrs")
+```
 
-```{r}
-data_clean %>% 
-  ggplot(aes(x = hours,
+
+```{r, fig.width=6, fig.height=6, fig.cap="Distribution of Time Spent by Program"}
+df_clean %>% 
+  apaSupp::spicy_histos(var = hours,
+                        split = prog) +
+  labs(x = "Weight Lost, lbs")
+```
+
+
+
+```{r, fig.width=6, fig.height=4, fig.cap="Distribution of Time Spent by Gender"}
+df_clean %>% 
+  apaSupp::spicy_histos(var = hours,
+                        split = gender) +
+  labs(x = "Time Spent, hrs")
+```
+
+
+
+```{r, fig.cap="Distribution of Effort"}
+df_clean %>% 
+  apaSupp::spicy_histos(var = effort) +
+  labs(x = "Program Effort")
+```
+
+
+```{r, fig.width=6, fig.height=6, fig.cap="Distribution of Effort by Program"}
+df_clean %>% 
+  apaSupp::spicy_histos(var = effort,
+                        split = prog) +
+  labs(x = "Program Effort")
+```
+
+
+```{r, fig.width=6, fig.height=4, fig.cap="Distribution of Program Effort by Gender"}
+df_clean %>% 
+  apaSupp::spicy_histos(var = effort,
+                        split = gender) +
+  labs(x = "Program Effort")
+```
+
+#### Multivariate Relationships
+
+
+```{r, fig.cap="Distribution of Weight Lost by Program and Gender, Option A"}
+df_clean %>% 
+  ggplot(aes(x = prog,
              y = loss)) +
-  geom_point() +
-  theme_bw()
-```
-
-```{r}
-data_clean %>% 
-  ggplot(aes(x = hours,
-             y = loss)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  theme_bw()
-```
-
-```{r}
-data_clean %>% 
-  ggplot(aes(x = hours,
-             y = loss)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
+  geom_hline(yintercept = 0) +
+  geom_violin(aes(fill = prog)) +
+  geom_boxplot(width = .2) +
+  stat_summary(geom = "point",
+               fun = "mean",
+               shape = 18,
+               size = 5,
+               color = "red") +
+  facet_grid(~ gender) +
   theme_bw() +
-  facet_grid(~ gender)
+  labs(x = "Exercise Program",
+       y = "Weight Lost, lbs") +
+  theme(legend.position = "none")
 ```
 
-```{r}
-data_clean %>% 
-  ggplot(aes(x = hours,
+
+
+```{r, fig.cap="Distribution of Weight Lost by Program and Gender, Option B"}
+df_clean %>% 
+  ggplot(aes(x = gender,
              y = loss)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
+  geom_hline(yintercept = 0) +
+  geom_violin(aes(fill = gender)) +
+  geom_boxplot(width = .2) +
+  stat_summary(geom = "point",
+               fun = "mean",
+               shape = 18,
+               size = 5,
+               color = "red") +
+  facet_grid(~ prog) +
   theme_bw() +
-  facet_grid(~ prog)
+  labs(x = NULL,
+       y = "Weight Lost, lbs") +
+  theme(legend.position = "none") +
+  scale_fill_manual(values = c("lightblue", "pink"))
 ```
 
-```{r}
-data_clean %>% 
-  ggplot(aes(x = hours,
-             y = loss)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
+
+```{r, fig.width = 6, fig.height = 5, fig.cap="Relationship Between Weight Loss and Time Spent by Program and Gender"}
+df_clean %>% 
+  dplyr::select(id,
+                loss,
+                prog,
+                gender,
+                "Time" = hours,
+                "Effort" = effort) %>% 
+  tidyr::pivot_longer(cols = c(-id, -loss, -prog, -gender)) %>% 
+  ggplot(aes(x = value,
+             y = loss,
+             group = prog,
+             color = prog)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm",
+              formula = y ~ x,
+              se = FALSE) +
+  ggpubr::stat_cor(aes(label = ..r.label..),
+                   cor.coef.name = "r",
+                   p.accuracy = 0.001,
+                   label.sep = "\n") +
   theme_bw() +
-  facet_grid(gender ~ prog)
+  facet_grid(gender ~ name, scale = "free_x") +
+  labs(x = NULL,
+       y = "Weight Loss, lbs",
+       color = "Program: ") +
+  theme(legend.position = "bottom")
 ```
 
 
-## Simple Linear Regression
+
+
+
+
+
+## SIMPLE LINEAR REGRESSION
 
 ### Fit a MLR Model
 
@@ -254,7 +377,7 @@ data_clean %>%
 
 ```{r}
 fit_lm_loss_hr <- lm(loss ~ hours,        # DV ~ IV's
-                     data = data_clean)
+                     data = df_clean)
 ```
 
 
@@ -356,7 +479,7 @@ fit_lm_loss_hr %>%
 
 
 
-##  Continuous by Continuous
+##  INTERATION: CONTINUOUS-BY-CONTINUOUS
 
 ### Fit MLR Model
 
@@ -370,7 +493,7 @@ The same model:
 
 ```{r}
 fit_lm_loss_hr_eff <- lm(loss ~ hours*effort,
-                         data = data_clean)
+                         data = df_clean)
 ```
 
 
@@ -541,7 +664,7 @@ fit_lm_loss_hr_eff %>%
 
 
 
-## Continuous by Categorical
+## INTERATION: CONTINUOUS-BY-CATEGORICAL
 
 ### Fit MLR Model
 
@@ -549,7 +672,7 @@ fit_lm_loss_hr_eff %>%
 
 ```{r}
 fit_lm_loss_gen <- lm(loss ~ gender,
-                      data = data_clean)
+                      data = df_clean)
 ```
 
 ```{r}
@@ -563,7 +686,7 @@ summary(fit_lm_loss_gen)
 
 ```{r}
 fit_lm_loss_hrs_gen <- lm(loss ~ hours*gender,
-                          data = data_clean)
+                          data = df_clean)
 ```
 
 
@@ -579,7 +702,7 @@ summary(fit_lm_loss_hrs_gen)
 
 ```{r}
 fit_lm_loss_prog <- lm(loss ~ prog,
-                          data = data_clean)
+                          data = df_clean)
 ```
 
 ```{r}
@@ -589,7 +712,7 @@ summary(fit_lm_loss_prog)
 
 ```{r}
 fit_lm_loss_hrs_prog <- lm(loss ~ hours*prog,
-                          data = data_clean)
+                          data = df_clean)
 ```
 
 
@@ -702,7 +825,7 @@ fit_lm_loss_hrs_prog %>%
 
 
 
-## Categorical by Categorical
+## INTERATION: CATEGORICAL-BY-CATEGORICAL
 
 ### Fit MLR Model
 
@@ -710,10 +833,10 @@ fit_lm_loss_hrs_prog %>%
 
 ```{r}
 fit_lm_loss_prog <- lm(loss ~ prog,
-                       data = data_clean)
+                       data = df_clean)
 
 fit_lm_loss_prog_gen <- lm(loss ~ prog*gender,
-                           data = data_clean)
+                           data = df_clean)
 ```
 
 
@@ -824,13 +947,13 @@ fit_lm_loss_prog_gen %>%
 
 
 
-## Three-way Interaction
+## INTERACTION: THREE-WAY
 
 ### Fit MLR Models
 
 ```{r}
 fit_lm_loss_3way_a <- lm(loss ~ prog*gender*effort,
-                           data = data_clean)
+                           data = df_clean)
 ```
 
 
@@ -850,7 +973,7 @@ anova(fit_lm_loss_3way_a)
 
 ```{r}
 fit_lm_loss_3way_b <- lm(loss ~ prog*gender*hours,
-                           data = data_clean)
+                           data = df_clean)
 ```
 
 

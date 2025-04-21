@@ -21,7 +21,7 @@ knitr::knit_hooks$set(webgl = hook_webgl)
 Regression Analysis and Linear Models: concepts, applicaitons, and implementation
 - By Richard B. Darlington & Andrew F. Hayes
 
-Chapter 3: Partial Relationships and the Multiple Linear Regressio Model
+Chapter 3: Partial Relationships and the Multiple Linear Regression Model
 
 
 ## The Data

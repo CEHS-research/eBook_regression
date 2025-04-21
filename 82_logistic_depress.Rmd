@@ -36,7 +36,10 @@ Dataset:  The following example uses the SPSS data set `Depress.sav`. The depend
 
 ```{r}
 df_depress <- haven::read_spss("https://raw.githubusercontent.com/CEHS-research/data/master/Hoffmann_datasets/depress.sav") %>% 
-  haven::as_factor()
+  haven::as_factor() %>% 
+  haven::zap_label() %>% 
+  haven::zap_formats() %>%  # remove SPSS junk
+  haven::zap_widths()
 
 tibble::glimpse(df_depress)
 ```
@@ -417,6 +420,66 @@ fit_glm_2 <- glm(satlife ~ sex + iq + age + weight,
 
 fit_glm_2 %>% summary() %>% coef()
 ```
+
+
+```{r}
+gt_glm <- function(x,
+                  narrow = FALSE,
+                  fit = c("r.squared",
+                          "adj.r.squared"),
+                  d = 2){
+
+  if (narrow == FALSE){
+    p_fun <- apaSupp::p_num
+  } else {
+    p_fun <- apaSupp::p_star
+  }
+
+  table <- x %>%
+    gtsummary::tbl_regression(intercept = TRUE,
+                              conf.int = FALSE,
+                              pvalue_fun = p_fun,
+                              tidy_fun = broom.helpers::tidy_with_broom_or_parameters)  %>%
+    # gtsummary::add_glance_table(include = fit) %>%
+    gtsummary::modify_column_unhide(column = std.error) %>%
+    gtsummary::remove_footnote_header() %>%
+    gtsummary::remove_abbreviation("SE = Standard Error")  %>%
+    gtsummary::modify_fmt_fun(estimate ~
+                                gtsummary::label_style_number(digits = d)) %>%
+    gtsummary::modify_fmt_fun(std.error ~
+                                gtsummary::label_style_number(digits = d,
+                                                              prefix = "(",
+                                                              suffix = ")"))
+  if (narrow == TRUE){
+    table <- table %>%
+      gtsummary::modify_column_merge(pattern = "{std.error} {p.value}",
+                                     row = !is.na(std.error)) %>%
+      gtsummary::modify_header(label = "Variable",
+                               estimate = "b",
+                               std.error = "(SE)")
+  } else {
+    table <- table %>%
+      gtsummary::modify_header(label = "Variable",
+                               estimate = "b",
+                               std.error = "(SE)",
+                               p.value = "p")
+  }
+
+  return(table)
+}
+
+
+
+```
+
+
+```{r}
+gt_glm(fit_glm_2)
+gt_glm(fit_glm_2, narrow = TRUE)
+
+```
+
+
 
 ### Tabulate Parameters
 
